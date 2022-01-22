@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The winter</title>
+</head>
+<body>
+    <canvas class="webgl"></canvas>
+    <audio autoplay loop  id="playAudio">
+        <source src="./lofi.mp3">
+    </audio>
+    <script type="text/javascript">
+        window.onmousedown=function(){
+            document.getElementById("playAudio").play();
+        }
+    </script>
+</body>
+</html>
