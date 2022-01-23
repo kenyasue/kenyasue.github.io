@@ -3,7 +3,9 @@ import Mesh from './mesh';
 import CANNON from 'cannon'
 
 interface initialParams {
-    radius: number,
+    width: number,
+    height: number,
+    depth: number,
     x: number,
     y: number,
     z: number,
@@ -11,14 +13,15 @@ interface initialParams {
     mass?: number
 }
 
-export default class Sphere extends Mesh {
+export default class Box extends Mesh {
 
     segments: number = 8;
     radius: number;
-    mass: number = 1;
 
     constructor({
-        radius,
+        width,
+        height,
+        depth,
         x,
         y,
         z,
@@ -28,25 +31,22 @@ export default class Sphere extends Mesh {
 
         super();
 
-        const geometry = new THREE.SphereGeometry(radius, this.segments, this.segments);
+        const geometry = new THREE.BoxGeometry(width, height, depth, 8, 8, 8)
         this.material = this.defaultMaterial({ color });
         this.mesh = new THREE.Mesh(geometry, this.material);
         this.color = color;
-        this.radius = radius;
 
         this.mesh.position.x = x;
         this.mesh.position.y = y;
         this.mesh.position.z = z;
 
-        const sphereShape = new CANNON.Sphere(radius);
+        const boxShape = new CANNON.Box(new CANNON.Vec3(width * 0.5, height * 0.5, depth * 0.5));
 
         this.physicsBody = new CANNON.Body({
-            mass: 1,
+            mass: mass,
             position: new CANNON.Vec3(x, y, z),
-            shape: sphereShape
+            shape: boxShape
         });
-
-
 
     }
 
