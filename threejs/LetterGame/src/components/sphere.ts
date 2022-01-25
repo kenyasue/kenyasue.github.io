@@ -7,13 +7,14 @@ interface initialParams {
     x: number,
     y: number,
     z: number,
-    color: number,
-    mass?: number
+    color: number | string,
+    mass?: number,
+    identifier?: string
 }
 
 export default class Sphere extends Mesh {
 
-    segments: number = 8;
+    segments: number = 16;
     radius: number;
     mass: number = 1;
 
@@ -23,15 +24,16 @@ export default class Sphere extends Mesh {
         y,
         z,
         color,
-        mass = 1
+        mass = 1,
+        identifier
     }: initialParams) {
 
-        super();
+        super({ identifier });
 
         const geometry = new THREE.SphereGeometry(radius, this.segments, this.segments);
         this.material = this.defaultMaterial({ color });
         this.mesh = new THREE.Mesh(geometry, this.material);
-        this.color = color;
+        this.color = new THREE.Color(color);
         this.radius = radius;
 
         this.mesh.position.x = x;

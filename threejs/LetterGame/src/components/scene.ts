@@ -2,34 +2,80 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import Mesh from "./mesh";
 import { GlobalStateEvent } from "./types";
+import state, { globalStateParams } from './state';
 import CANNON from 'cannon'
+import { Object3D } from 'three';
+import Color from 'color';
+import gui from '../lib/debugger';
+import * as Constants from '../lib/constants';
 
 export default class Scene {
 
-    gui: any;
     canvas: HTMLElement;
     scene: THREE.Scene;
     controlls: OrbitControls;
     mainCamera: THREE.PerspectiveCamera;
     renderer: THREE.WebGLRenderer;
     objects: Array<Mesh>;
-    globalState: GlobalStateEvent;
+    globalStateEvent: GlobalStateEvent;
     world: any;
     physicsDefaultContactMaterial: CANNON.ContactMaterial;
     physicsDefaultMaterial: CANNON.Material;
+    light1: THREE.Light;
+    currentOnMouseObj: Mesh;
 
     constructor(canvasQuery: string) {
 
         /**
          * Base
          */
-
+        gui.show(true);
 
         // Canvas
         this.canvas = document.querySelector(canvasQuery)
 
         // Scene
         this.scene = new THREE.Scene()
+        this.scene.background = new THREE.Color(0xcccccc);
+        this.scene.fog = new THREE.Fog(0xcccccc, -1, 100)
+
+        const light1 = new THREE.AmbientLight(0xffffff, 0.2);
+        this.scene.add(light1);
+
+        const light2 = new THREE.DirectionalLight(0xffffff, 0.5);
+        light2.position.set(100, 100, 0);
+        light2.target.position.set(0, 0, 0);
+        light2.shadow.camera.near = 1;
+        light2.shadow.camera.far = 1000;
+        light2.castShadow = true;
+        light2.shadow.camera.left = -50;
+        light2.shadow.camera.right = 50;
+        light2.shadow.camera.top = 50;
+        light2.shadow.camera.bottom = -50;
+        light2.shadow.mapSize.width = 256;
+        light2.shadow.mapSize.height = 256;
+        this.scene.add(light2);
+
+        const light3 = new THREE.DirectionalLight(0xffffff, 0.5);
+        light3.position.set(0, 100, 0);
+        light3.target.position.set(0, 0, 0);
+        this.scene.add(light3);
+
+        const light4 = new THREE.DirectionalLight(0xffffff, 1);
+        light4.position.set(0, 0, 100);
+        light4.target.position.set(0, 0, 0);
+        this.scene.add(light4);
+
+        /*
+        gui.add(light2.position, "x").min(-100).max(100).step(1);
+        gui.add(light2.position, "y").min(-100).max(100).step(1);
+        gui.add(light2.position, "z").min(-100).max(100).step(1);
+        gui.add(light2.rotation, "x").min(Math.PI * -1.0).max(Math.PI * 1.0).step(0.01);
+        gui.add(light2.rotation, "y").min(Math.PI * -1.0).max(Math.PI * 1.0).step(0.01);
+        gui.add(light2.rotation, "z").min(Math.PI * -1.0).max(Math.PI * 1.0).step(0.01);
+        gui.add(light2.shadow.camera, "near").min(-50).max(50).step(1);
+        gui.add(light2.shadow.camera, "far").min(-50).max(50).step(1);
+        */
 
         /**
          * Textures
@@ -72,10 +118,11 @@ export default class Scene {
          * Camera
          */
         // Base camera
-        this.mainCamera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
+        this.mainCamera = new THREE.PerspectiveCamera(50, sizes.width / sizes.height, 0.1, 200)
         this.mainCamera.position.x = 15;
-        this.mainCamera.position.y = 15;
-        this.mainCamera.position.z = 15;
+        this.mainCamera.position.y = 20;
+        this.mainCamera.position.z = 30;
+        this.mainCamera.lookAt(0, 0, 0);
         this.scene.add(this.mainCamera)
 
         // Controls
@@ -90,6 +137,7 @@ export default class Scene {
         })
         this.renderer.setSize(sizes.width, sizes.height)
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.shadowMap.enabled = true;
 
         this.objects = [];
 
@@ -105,12 +153,75 @@ export default class Scene {
             this.physicsDefaultMaterial,
             this.physicsDefaultMaterial,
             {
-                friction: 0.1,
-                restitution: 0.1
+                friction: 1,
+                restitution: 0
             }
         )
         this.world.addContactMaterial(this.physicsDefaultContactMaterial)
 
+        /* events */
+        state.subscribe(this);
+        this.globalStateEvent = {
+            mousePos: (position: THREE.Vector2) => {
+
+                // find object
+                const raycaster = new THREE.Raycaster()
+                raycaster.setFromCamera(position, this.mainCamera);
+
+                const objectsToTest: Array<Object3D> = this.objects.map(obj => obj.mesh);
+                const intersects = raycaster.intersectObjects(objectsToTest.filter(obj => obj))
+                if (!intersects) return;
+
+                if (intersects[0]) {
+
+                    const intersectObj: Mesh = this.objects.find(obj => obj.mesh === intersects[0].object);
+                    if (!intersectObj) {
+                        if (this.currentOnMouseObj) {
+                            this.currentOnMouseObj.sceneEvents.onMouseLeave();
+                            this.currentOnMouseObj = null;
+                        }
+                        return;
+                    }
+                    if (intersectObj) {
+                        intersectObj.selectable ? this.controlls.enabled = false : this.controlls.enabled = true;
+                        intersectObj.sceneEvents.onMouseEnter();
+                    }
+                    if (this.currentOnMouseObj !== intersectObj
+                        && this.currentOnMouseObj) this.currentOnMouseObj.sceneEvents.onMouseLeave();
+
+                    this.currentOnMouseObj = intersectObj;
+
+                    // get floor position
+                    intersects.forEach(intersect => {
+                        const mesh: Mesh = this.objects.find(obj => obj.mesh === intersect.object);
+                        if (mesh.identifier === Constants.floorIdentifier) {
+                            state.updateParam(globalStateParams.mousePosOnFloor, intersect.point);
+                        }
+                    });
+
+                } else {
+                    if (!this.controlls.enabled) this.controlls.enabled = true;
+                }
+
+
+            },
+            mouseClick: (clickState: boolean) => {
+
+                // find object
+                const raycaster = new THREE.Raycaster()
+                raycaster.setFromCamera(state.mousePos, this.mainCamera);
+
+                const objectsToTest: Array<Object3D> = this.objects.map(obj => obj.mesh);
+                const intersects = raycaster.intersectObjects(objectsToTest.filter(obj => obj))
+
+                if (intersects && intersects[0]) {
+                    const intersectObj: Mesh = this.objects.find(obj => obj.mesh === intersects[0].object);
+                    if (intersectObj) {
+                        clickState ? intersectObj.sceneEvents.onMouseDown() : intersectObj.sceneEvents.onMouseUp();
+                    }
+                }
+            }
+        }
     }
 
     add(obj: Mesh) {

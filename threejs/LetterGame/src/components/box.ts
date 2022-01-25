@@ -9,8 +9,9 @@ interface initialParams {
     x: number,
     y: number,
     z: number,
-    color: number,
-    mass?: number
+    color: number | string,
+    mass?: number,
+    identifier?: string
 }
 
 export default class Box extends Mesh {
@@ -26,15 +27,16 @@ export default class Box extends Mesh {
         y,
         z,
         color,
-        mass = 1
+        mass = 1,
+        identifier
     }: initialParams) {
 
-        super();
+        super({ identifier });
 
         const geometry = new THREE.BoxGeometry(width, height, depth, 8, 8, 8)
         this.material = this.defaultMaterial({ color });
         this.mesh = new THREE.Mesh(geometry, this.material);
-        this.color = color;
+        this.color = new THREE.Color(color);
 
         this.mesh.position.x = x;
         this.mesh.position.y = y;

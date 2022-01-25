@@ -9,8 +9,10 @@ interface initialParams {
     x: number,
     y: number,
     z: number,
-    color: number,
-    mass?: number
+    color: number | string,
+    opacity?: number
+    mass?: number,
+    identifier?: string
 }
 
 export default class Contaier extends Mesh {
@@ -23,16 +25,17 @@ export default class Contaier extends Mesh {
         y,
         z,
         color,
-        mass = 1
+        opacity = 1,
+        mass = 1,
+        identifier
     }: initialParams) {
 
-        super();
+        super({ identifier });
         const thickness = 0.5;
 
         // material
-        this.material = this.defaultMaterial({ color });
-        this.color = color;
-
+        this.material = this.defaultMaterial({ color, opacity });
+        this.color = new THREE.Color(color);
         const geometryFloor = new THREE.BoxGeometry(width, thickness, depth, 8, 8, 8)
         const meshFloor = new THREE.Mesh(geometryFloor, this.material);
         meshFloor.position.set(x, y, z);

@@ -13,3 +13,19 @@ export function loadFont(path: string): Promise<Font> {
         )
     })
 }
+
+export function getRandomLetter(): string {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZČĆĐŠŽ";
+    const index = Math.random() * 10000 % letters.length;
+    return letters.substring(index, index + 1);
+}
+
+export function randomString(length: number): string {
+    var result = "";
+    var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    var charactersLength = characters.length;
+    for (var i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+};

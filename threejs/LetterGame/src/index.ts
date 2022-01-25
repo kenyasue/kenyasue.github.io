@@ -1,5 +1,5 @@
 import './style.css'
-import * as dat from 'lil-gui';
+import * as THREE from 'three'
 
 import Scene from "./components/scene";
 import Sphere from "./components/sphere";
@@ -7,11 +7,14 @@ import Font, { createFont } from './components/font';
 import Box from "./components/box";
 import Container from "./components/container";
 import state, { globalStateParams } from './components/state';
+import ColorGenerator from 'colors-generator';
+import { getRandomLetter } from './lib/utils';
+import * as Constants from './lib/constants';
+import gui from './lib/debugger';
 
 (async () => {
 
     // Debug
-    const gui = new dat.GUI()
     gui.add({
         createSphere: () => {
             const sphere1 = new Sphere({
@@ -43,65 +46,96 @@ import state, { globalStateParams } from './components/state';
     }, 'createBox');
 
 
-    let count = 100;
+    let count = 200;
+    const colors: Array<string> = ColorGenerator.generate('#86bff2', 10).darker(0.1).get()
+
     const timer = setInterval(() => {
-        count--;
-        if (count === 0) clearInterval(timer);
 
-        const sphere1 = new Sphere({
-            radius: Math.random() * 0.5 + 0.5,
-            x: Math.random() * 10 - 5,
-            y: Math.random() * 20,
-            z: Math.random() * 10 - 5,
-            color: 0xffff00
-        });
+        (async () => {
 
-        scene.add(sphere1);
+            count--;
+            if (count === 0) clearInterval(timer);
+            const strColor = colors[Math.floor(Math.random() * 10000 % colors.length)];
 
-        const box1 = new Box({
-            width: Math.random() * 0.5 + 0.5,
-            height: Math.random() * 0.5 + 0.5,
-            depth: Math.random() * 0.5 + 0.5,
-            x: Math.random() * 10 - 5,
-            y: Math.random() * 20,
-            z: Math.random() * 10 - 5,
-            color: 0xff0000
-        })
+            const font1 = await createFont({
+                text: getRandomLetter(),
+                x: Math.random() * 10 - 5,
+                y: Math.random() * 20,
+                z: Math.random() * 10 - 5,
+                color: strColor,
+                opacity: 1.0,
+                selectable: true
+            });
+            font1.mesh.castShadow = true;
 
-        scene.add(box1);
+            scene.add(font1);
 
-    }, 100)
+        })();
+
+    }, 10)
     const scene: Scene = new Scene('canvas.webgl');
     scene.run();
 
-    const font1 = await createFont({
-        text: "Test",
-        x: 0,
-        y: 0,
-        z: 0,
-        color: 0xffff00
-    })
-
-    //scene.add(font1);
-
+    /*
     const floorBox = new Container({
-        width: 20,
+        width: 15,
         height: 3,
-        depth: 20,
+        depth: 15,
         x: 1,
         y: -4,
         z: 1,
-        color: 0x0000ff,
-        mass: 0
+        color: 0xeeeeee,
+        mass: 0,
+        opacity: 0.5
     })
-
+    
     scene.add(floorBox);
+
     gui.add(floorBox.physicsBody.quaternion, "x").min(Math.PI * -0.1).max(Math.PI * 0.1).step(0.01);
     gui.add(floorBox.physicsBody.quaternion, "y").min(Math.PI * -0.1).max(Math.PI * 0.1).step(0.01);
     gui.add(floorBox.physicsBody.quaternion, "z").min(Math.PI * -0.1).max(Math.PI * 0.1).step(0.01);
+    */
+
+    const floor = new Box({
+        width: 200,
+        height: 0.3,
+        depth: 200,
+        x: 0,
+        y: 0,
+        z: 0,
+        color: 0xffffff,
+        mass: 0,
+        identifier: Constants.floorIdentifier
+    })
+    floor.mesh.receiveShadow = true;
+    scene.add(floor);
+
+    // window 
+    const sizes = {
+        width: window.innerWidth,
+        height: window.innerHeight
+    }
 
     window.onclick = () => {
         //state.updateParam(globalStateParams.showWireframe, !state.showWireframe);
     }
+
+    const mouse = new THREE.Vector2()
+
+    window.addEventListener('mousemove', (event) => {
+
+        mouse.x = event.clientX / sizes.width * 2 - 1
+        mouse.y = - (event.clientY / sizes.height) * 2 + 1
+
+        state.updateParam(globalStateParams.mousePos, mouse);
+    })
+
+    window.addEventListener('mousedown', (event) => {
+        state.updateParam(globalStateParams.mouseClick, true);
+    })
+
+    window.addEventListener('mouseup', (event) => {
+        state.updateParam(globalStateParams.mouseClick, false);
+    })
 
 })();
